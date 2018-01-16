@@ -216,9 +216,9 @@ class d2agent:
         args = arg.split()
         if   (cmdck('add' , 4, args)):
             self.nfvi_add(args[1], args[2], args[3])
-        elif (cmdck('del' , 1, args)): self.nfvi_del(args[1]);
-        elif (cmdck('list', 0, args)): self.nfvi_list()
-        elif (cmdck('stat', 1, args)): self.nfvi_stat(args[1])
+        elif (cmdck('del' , 2, args)): self.nfvi_del(args[1]);
+        elif (cmdck('list', 1, args)): self.nfvi_list()
+        elif (cmdck('stat', 2, args)): self.nfvi_stat(args[1])
         else: print(usagestr)
 
     def nfvi_stat(self, nfviname):
@@ -387,14 +387,10 @@ def background_d2monitor(vnf, agent, monsec):
         print('vnf not found')
         return
 
-    f = None
-    if (os.path.exists(d2vnfobj.d2mon_filename())):
-        f = open(d2vnfobj.d2mon_filename(), 'a')
-    else:
-        f = open(d2vnfobj.d2mon_filename(), 'a')
-        f.write('#time, rx_pkts, tpr, n_core\n')
-
+    f = open(d2vnfobj.d2mon_filename(), 'a')
+    f.write('[{}] start d2 monitoring\n'.format(ts()))
     f.flush()
+
     for i in range(monsec*2):
         cur_thrd = threading.current_thread()
         cast(myThread, cur_thrd)
@@ -427,5 +423,10 @@ def background_d2monitor(vnf, agent, monsec):
                         f.flush()
                         d2.d2in(vnf, nfvi)
         time.sleep(0.5)
+
+    f.write('[{}] finish d2 monitoring\n'.format(ts()))
+    f.flush()
+    f.close()
+    return
 
 
