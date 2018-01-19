@@ -359,18 +359,42 @@ def background_perfmonitor(vnf, agent, monsec):
         f = open(d2vnfobj.pmon_filename(), 'a')
         f.write('#time, rx_pkts, tpr, n_core\n')
 
-    for i in range(monsec):
-        cur_thrd = threading.current_thread()
-        cast(myThread, cur_thrd)
-        if (cur_thrd.running_flag == False): break
-        vnf.sync()
-        f.write('{:010}, {:010}, {:03}, {:03}\n'.format(
-            int(ts()),
-            int(vnf.rxrate()),
-            math.floor(vnf.perfred() * 100),
-            vnf.n_core()))
-        f.flush()
-        time.sleep(1)
+    if (monsec == 0):
+        while True:
+            cur_thrd = threading.current_thread()
+            cast(myThread, cur_thrd)
+            if (cur_thrd.running_flag == False): break
+
+            if (not os.path.exists(d2vnfobj.pmon_filename())):
+                f = open(d2vnfobj.pmon_filename(), 'w')
+                f.write('#time, rx_pkts, tpr, n_core\n')
+
+            vnf.sync()
+            f.write('{:010}, {:010}, {:03}, {:03}\n'.format(
+                int(ts()),
+                int(vnf.rxrate()),
+                math.floor(vnf.perfred() * 100),
+                vnf.n_core()))
+            f.flush()
+            time.sleep(1)
+    else:
+        for i in range(monsec):
+            cur_thrd = threading.current_thread()
+            cast(myThread, cur_thrd)
+            if (cur_thrd.running_flag == False): break
+
+            if (not os.path.exists(d2vnfobj.pmon_filename())):
+                f = open(d2vnfobj.pmon_filename(), 'w')
+                f.write('#time, rx_pkts, tpr, n_core\n')
+
+            vnf.sync()
+            f.write('{:010}, {:010}, {:03}, {:03}\n'.format(
+                int(ts()),
+                int(vnf.rxrate()),
+                math.floor(vnf.perfred() * 100),
+                vnf.n_core()))
+            f.flush()
+            time.sleep(1)
     f.close()
 
 
@@ -391,38 +415,72 @@ def background_d2monitor(vnf, agent, monsec):
     f.write('[{}] start d2 monitoring\n'.format(ts()))
     f.flush()
 
-    for i in range(monsec*2):
-        cur_thrd = threading.current_thread()
-        cast(myThread, cur_thrd)
-        if (cur_thrd.running_flag == False): break
+    if (monsec == 0):
+        while True:
+            cur_thrd = threading.current_thread()
+            cast(myThread, cur_thrd)
+            if (cur_thrd.running_flag == False): break
 
-        vnf.sync()
-        n_core = vnf.n_core()
-        rxrate = vnf.rxrate()
-        perf = math.floor(vnf.perfred() * 100)
-        perf = 100 if (perf>100) else perf
+            vnf.sync()
+            n_core = vnf.n_core()
+            rxrate = vnf.rxrate()
+            perf = math.floor(vnf.perfred() * 100)
+            perf = 100 if (perf>100) else perf
 
-        max_rate = 17000000
-        if (perf < 90):
+            max_rate = 17000000
             if (perf < 90):
-                f.write('[{}] d2out\n'.format(ts()))
-                f.flush()
-                d2.d2out(vnf, nfvi)
-        else:
-            if (n_core == 1): pass
-            elif (n_core == 2):
-                if (perf > 85):
-                    if (rxrate < (max_rate*0.3)):
-                        f.write('[{}] d2in pattern2\n'.format(ts()))
-                        f.flush()
-                        d2.d2in(vnf, nfvi)
-            elif (n_core == 4):
-                if (perf > 85):
-                    if (rxrate < (max_rate*0.6)):
-                        f.write('[{}] d2in pattern1\n'.format(ts()))
-                        f.flush()
-                        d2.d2in(vnf, nfvi)
-        time.sleep(0.5)
+                if (perf < 90):
+                    f.write('[{}] d2out\n'.format(ts()))
+                    f.flush()
+                    d2.d2out(vnf, nfvi)
+            else:
+                if (n_core == 1): pass
+                elif (n_core == 2):
+                    if (perf > 85):
+                        if (rxrate < (max_rate*0.3)):
+                            f.write('[{}] d2in pattern2\n'.format(ts()))
+                            f.flush()
+                            d2.d2in(vnf, nfvi)
+                elif (n_core == 4):
+                    if (perf > 85):
+                        if (rxrate < (max_rate*0.6)):
+                            f.write('[{}] d2in pattern1\n'.format(ts()))
+                            f.flush()
+                            d2.d2in(vnf, nfvi)
+            time.sleep(0.5)
+    else:
+        for i in range(monsec*2):
+            cur_thrd = threading.current_thread()
+            cast(myThread, cur_thrd)
+            if (cur_thrd.running_flag == False): break
+
+            vnf.sync()
+            n_core = vnf.n_core()
+            rxrate = vnf.rxrate()
+            perf = math.floor(vnf.perfred() * 100)
+            perf = 100 if (perf>100) else perf
+
+            max_rate = 17000000
+            if (perf < 90):
+                if (perf < 90):
+                    f.write('[{}] d2out\n'.format(ts()))
+                    f.flush()
+                    d2.d2out(vnf, nfvi)
+            else:
+                if (n_core == 1): pass
+                elif (n_core == 2):
+                    if (perf > 85):
+                        if (rxrate < (max_rate*0.3)):
+                            f.write('[{}] d2in pattern2\n'.format(ts()))
+                            f.flush()
+                            d2.d2in(vnf, nfvi)
+                elif (n_core == 4):
+                    if (perf > 85):
+                        if (rxrate < (max_rate*0.6)):
+                            f.write('[{}] d2in pattern1\n'.format(ts()))
+                            f.flush()
+                            d2.d2in(vnf, nfvi)
+            time.sleep(0.5)
 
     f.write('[{}] finish d2 monitoring\n'.format(ts()))
     f.flush()

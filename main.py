@@ -34,6 +34,7 @@ def main():
     agent = d2agent.d2agent()
     agent.nfvi_add('nfvi0', 'labnet5.dpdk.ninja', 8888)
     agent.vnf_add('vnf0', 'nfvi0')
+    agent.vnf_add('vnf1', 'nfvi0')
     shell = threading.Thread(target=Shell(agent).cmdloop, name='shell')
     shell.start()
 
