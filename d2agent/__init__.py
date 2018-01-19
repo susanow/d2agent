@@ -15,7 +15,9 @@ def cmdck(opt, arglen, args):
 
 def ts():
     from datetime import datetime
-    now = datetime.now().strftime("%s")
+    # now = datetime.now().strftime("%s")
+    # now = datetime.now().isoformat()
+    now = datetime.now().strftime("%H%M%S")
     return now
 
 def cast(ParentalClass, child_object):
@@ -359,13 +361,23 @@ def background_perfmonitor(vnf, agent, monsec):
         f = open(d2vnfobj.pmon_filename(), 'a')
         f.write('#time, rx_pkts, tpr, n_core\n')
 
-    for i in range(monsec):
+    i = 0
+    while True:
+        if (monsec != 0):
+            if (i >= monsec): break
+        i = i+1
+
         cur_thrd = threading.current_thread()
         cast(myThread, cur_thrd)
         if (cur_thrd.running_flag == False): break
+
+        if (not os.path.exists(d2vnfobj.pmon_filename())):
+            f = open(d2vnfobj.pmon_filename(), 'w')
+            f.write('#time, rx_pkts, tpr, n_core\n')
+
         vnf.sync()
-        f.write('{:010}, {:010}, {:03}, {:03}\n'.format(
-            int(ts()),
+        f.write('{}, {:010}, {:03}, {:03}\n'.format(
+            ts(),
             int(vnf.rxrate()),
             math.floor(vnf.perfred() * 100),
             vnf.n_core()))
@@ -391,7 +403,12 @@ def background_d2monitor(vnf, agent, monsec):
     f.write('[{}] start d2 monitoring\n'.format(ts()))
     f.flush()
 
-    for i in range(monsec*2):
+    i = 0
+    while True:
+        if (monsec != 0):
+            if (i >= monsec): break
+        i = i + 1
+
         cur_thrd = threading.current_thread()
         cast(myThread, cur_thrd)
         if (cur_thrd.running_flag == False): break
