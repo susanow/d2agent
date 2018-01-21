@@ -26,7 +26,10 @@ def main():
     # thrd1.start()
     return
 
-def safe_d2out
+def safe_d2out(vnf, nfvi):
+    d2.d2in(ssn_vnf, ssn_nfvi)
+    pass # TODO IMplement
+
 
 def background_d2monitor():
     nfvi0 = susanow.nfvi.nfvi('labnet5.dpdk.ninja', 8888)
