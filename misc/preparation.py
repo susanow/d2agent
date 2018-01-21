@@ -30,7 +30,7 @@ vnf1.attach_port(0, pci2)
 vnf1.attach_port(1, pci3)
 vnf1.reset()
 
-# d2.d2deploy(vnf0, nfvi)
-# d2.d2deploy(vnf1, nfvi)
+d2.d2deploy(vnf0, nfvi)
+d2.d2deploy(vnf1, nfvi)
 
 

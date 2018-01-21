@@ -126,7 +126,9 @@ class d2vnf:
         return '{}_d2monitor'.format(self.name)
 
 
+
 class d2agent:
+    background_d2monitor=None
     vnfs = []
     nfvis = []
     threads = []
@@ -330,7 +332,7 @@ class d2agent:
         if (op == 'on'):
             self.create_thread_bg(
                 name=vnf.d2mon_threadname(),
-                target=background_d2monitor,
+                target=self.background_d2monitor,
                 args=(vnf, self,))
         elif (op == 'off'):
             for i in range(len(self.threads)):
@@ -342,58 +344,6 @@ class d2agent:
 
 
 
-
-def background_d2monitor(vnf, agent):
-    assert(isinstance(vnf   , d2vnf  ))
-    assert(isinstance(agent , d2agent))
-    import susanow.d2 as d2
-    d2vnfobj = vnf
-    nfvi = vnf.nfvi.cast2ssn()
-    vnf = nfvi.get_vnf(vnf.name)
-    if (vnf == None):
-        print('vnf not found')
-        return
-
-    f = open('/tmp/ssn_d2log.log', 'a')
-    f.write('[{}] {} start d2 monitoring\n'.format(ts(), vnf.name()))
-    f.flush()
-
-    while True:
-        cur_thrd = threading.current_thread()
-        cast(myThread, cur_thrd)
-        if (cur_thrd.running_flag == False): break
-
-        vnf.sync()
-        n_core = vnf.n_core()
-        rxrate = vnf.rxrate()
-        perf = math.floor(vnf.perfred() * 100)
-        perf = 100 if (perf>100) else perf
-
-        max_rate = 17000000
-        if (perf < 90):
-            f.write('[{}] {} d2out\n'.format(ts(), vnf.name()))
-            f.flush()
-            d2.d2out(vnf, nfvi)
-        else:
-            if (n_core == 1): pass
-            elif (n_core == 2):
-                if (perf > 85):
-                    if (rxrate < (max_rate*0.3)):
-                        f.write('[{}] {} d2in pattern2\n'.format(ts(), vnf.name()))
-                        f.flush()
-                        d2.d2in(vnf, nfvi)
-            elif (n_core == 4):
-                if (perf > 85):
-                    if (rxrate < (max_rate*0.6)):
-                        f.write('[{}] {} d2in pattern1\n'.format(ts(), vnf.name()))
-                        f.flush()
-                        d2.d2in(vnf, nfvi)
-        time.sleep(0.5)
-
-    f.write('[{}] finish d2 monitoring\n'.format(ts()))
-    f.flush()
-    f.close()
-    return
 
 
 def background_sysrecord_thread(agent):
