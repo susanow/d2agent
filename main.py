@@ -25,6 +25,7 @@ class Shell(Cmd):
     def do_vnf(self, arg):  self.agent.cmd_vnf(arg)
     def do_nfvi(self, arg): self.agent.cmd_nfvi(arg)
     def do_thrd(self, arg): self.agent.cmd_thrd(arg)
+    def do_sys(self, arg):  self.agent.cmd_sys(arg)
 
 
 def main():

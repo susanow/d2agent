@@ -197,15 +197,45 @@ class d2agent:
             "vnf add <vnf-name> <nfvi-name>\n" \
             "vnf del <vnf-name>\n" \
             "vnf stat <vnf-name>\n" \
-            "vnf pmon  <vnf-name> <monitor-sec>\n" \
             "vnf d2mon <vnf-name> <monitor-sec>\n"
         args = arg.split()
         if   (cmdck('list' , 0, args)): self.vnf_list()
         elif (cmdck('add'  , 3, args)): self.vnf_add(args[1], args[2])
         elif (cmdck('del'  , 2, args)): self.vnf_del(args[1])
         elif (cmdck('stat' , 2, args)): self.vnf_stat(args[1])
-        elif (cmdck('pmon' , 3, args)): self.vnf_pmon(args[1], args[2])
         elif (cmdck('d2mon', 3, args)): self.vnf_d2mon(args[1], args[2])
+        else: print(usagestr)
+
+    def cmd_sys(self, arg):
+        usagestr = \
+            "Usage: sys [OPTIONS]\n" \
+            "nfvi record <on|off>\n" \
+            "nfvi record off\n"
+        args = arg.split()
+        if (cmdck('record' , 2, args)):
+            if (args[1] == 'on'):
+                self.create_thread_bg(
+                    name='sysrecord_thread',
+                    target=background_sysrecord_thread,
+                    args=(self,))
+            elif (args[1] == 'off'):
+                for i in range(len(self.threads)):
+                    if (self.threads[i].name == 'sysrecord_thread'):
+                        self.threads[i].stop()
+                        return
+                print('thread is not start yet')
+            elif (args[1] == 'clear'):
+                f = open('/tmp/ssn_record.csv', 'w')
+                f.write('#idx, ts')
+                nfvis = self.nfvis
+                for nfvi in nfvis:
+                    vnfs = nfvi.vnfs
+                    for vnf in vnfs:
+                        f.write(',{}({}),tpr,ncore'.format(vnf.name, vnf.nfvi.name))
+                f.write('\n')
+                f.flush()
+                f.close()
+            else: print(usagestr)
         else: print(usagestr)
 
     def cmd_nfvi(self, arg):
@@ -291,106 +321,31 @@ class d2agent:
         for i in range(len(self.nfvis)):
             self.nfvis[i].summary()
 
-    def vnf_pmon(self, vnfname, monsec):
+    def vnf_d2mon(self, vnfname, op):
         vnf = self.vnf_find(vnfname)
         if (vnf == None):
             print('vnf not found')
             return
         assert(isinstance(vnf, d2vnf))
-        if (monsec == 'clear'):
-            if (os.path.exists(vnf.pmon_filename())):
-                os.remove(vnf.pmon_filename())
-            else: print('file not found')
-        elif (monsec == 'off'):
-            for i in range(len(self.threads)):
-                if (self.threads[i].name == vnf.pmon_threadname()):
-                    self.threads[i].stop()
-                    return
-            print('thread is not start yet')
-        else:
-            try:
-                self.create_thread_bg(
-                    name=vnf.pmon_threadname(),
-                    target=background_perfmonitor,
-                    args=(vnf, self, int(monsec),))
-            except:
-                print('syntax is invalid')
-
-    def vnf_d2mon(self, vnfname, monsec):
-        vnf = self.vnf_find(vnfname)
-        if (vnf == None):
-            print('vnf not found')
-            return
-        assert(isinstance(vnf, d2vnf))
-        if (monsec == 'clear'):
-            if (os.path.exists(vnf.d2mon_filename())):
-                os.remove(vnf.d2mon_filename())
-            else: print('file not found')
-        elif (monsec == 'off'):
+        if (op == 'on'):
+            self.create_thread_bg(
+                name=vnf.d2mon_threadname(),
+                target=background_d2monitor,
+                args=(vnf, self,))
+        elif (op == 'off'):
             for i in range(len(self.threads)):
                 if (self.threads[i].name == vnf.d2mon_threadname()):
                     self.threads[i].stop()
                     return
             print('thread is not start yet')
-        else:
-            try:
-                self.create_thread_bg(
-                    name=vnf.d2mon_threadname(),
-                    target=background_d2monitor,
-                    args=(vnf, self, int(monsec),))
-            except:
-                print('syntax is invalid')
+        else: print('syntax is invalid')
 
 
 
 
-def background_perfmonitor(vnf, agent, monsec):
+def background_d2monitor(vnf, agent):
     assert(isinstance(vnf   , d2vnf  ))
     assert(isinstance(agent , d2agent))
-    assert(isinstance(monsec, int    ))
-    d2vnfobj = vnf
-    vnf = vnf.nfvi.cast2ssn().get_vnf(vnf.name)
-    if (vnf == None):
-        print('vnf not found')
-        return
-
-    f = None
-    if (os.path.exists(d2vnfobj.pmon_filename())):
-        f = open(d2vnfobj.pmon_filename(), 'a')
-    else:
-        f = open(d2vnfobj.pmon_filename(), 'a')
-        f.write('#time, rx_pkts, tpr, n_core\n')
-
-    i = 0
-    while True:
-        if (monsec != 0):
-            if (i >= monsec): break
-        i = i+1
-
-        cur_thrd = threading.current_thread()
-        cast(myThread, cur_thrd)
-        if (cur_thrd.running_flag == False): break
-
-        if (not os.path.exists(d2vnfobj.pmon_filename())):
-            f = open(d2vnfobj.pmon_filename(), 'w')
-            f.write('#time, rx_pkts, tpr, n_core\n')
-
-        vnf.sync()
-        f.write('{}, {:010}, {:03}, {:03}\n'.format(
-            ts(),
-            int(vnf.rxrate()),
-            math.floor(vnf.perfred() * 100),
-            vnf.n_core()))
-        f.flush()
-        time.sleep(1)
-    f.close()
-
-
-
-def background_d2monitor(vnf, agent, monsec):
-    assert(isinstance(vnf   , d2vnf  ))
-    assert(isinstance(agent , d2agent))
-    assert(isinstance(monsec, int    ))
     import susanow.d2 as d2
     d2vnfobj = vnf
     nfvi = vnf.nfvi.cast2ssn()
@@ -399,16 +354,11 @@ def background_d2monitor(vnf, agent, monsec):
         print('vnf not found')
         return
 
-    f = open(d2vnfobj.d2mon_filename(), 'a')
-    f.write('[{}] start d2 monitoring\n'.format(ts()))
+    f = open('/tmp/ssn_d2log.log', 'a')
+    f.write('[{}] {} start d2 monitoring\n'.format(ts(), vnf.name()))
     f.flush()
 
-    i = 0
     while True:
-        if (monsec != 0):
-            if (i >= monsec): break
-        i = i + 1
-
         cur_thrd = threading.current_thread()
         cast(myThread, cur_thrd)
         if (cur_thrd.running_flag == False): break
@@ -421,22 +371,21 @@ def background_d2monitor(vnf, agent, monsec):
 
         max_rate = 17000000
         if (perf < 90):
-            if (perf < 90):
-                f.write('[{}] d2out\n'.format(ts()))
-                f.flush()
-                d2.d2out(vnf, nfvi)
+            f.write('[{}] {} d2out\n'.format(ts(), vnf.name()))
+            f.flush()
+            d2.d2out(vnf, nfvi)
         else:
             if (n_core == 1): pass
             elif (n_core == 2):
                 if (perf > 85):
                     if (rxrate < (max_rate*0.3)):
-                        f.write('[{}] d2in pattern2\n'.format(ts()))
+                        f.write('[{}] {} d2in pattern2\n'.format(ts(), vnf.name()))
                         f.flush()
                         d2.d2in(vnf, nfvi)
             elif (n_core == 4):
                 if (perf > 85):
                     if (rxrate < (max_rate*0.6)):
-                        f.write('[{}] d2in pattern1\n'.format(ts()))
+                        f.write('[{}] {} d2in pattern1\n'.format(ts(), vnf.name()))
                         f.flush()
                         d2.d2in(vnf, nfvi)
         time.sleep(0.5)
@@ -445,5 +394,43 @@ def background_d2monitor(vnf, agent, monsec):
     f.flush()
     f.close()
     return
+
+
+def background_sysrecord_thread(agent):
+    assert(isinstance(agent , d2agent))
+    f = open('/tmp/ssn_record.csv', 'w')
+
+    f.write('#idx, ts')
+    nfvis = agent.nfvis
+    for nfvi in nfvis:
+        vnfs = nfvi.vnfs
+        for vnf in vnfs:
+            f.write(',{}({}),tpr,ncore'.format(vnf.name, vnf.nfvi.name))
+    f.write('\n')
+    f.flush()
+
+    i = 0
+    while True:
+        cur_thrd = threading.current_thread()
+        cast(myThread, cur_thrd)
+        if (cur_thrd.running_flag == False): break
+
+        ss = '{}, {}'.format(i, ts())
+        f.write(ss)
+        for nfvi in nfvis:
+            vnfs = nfvi.vnfs
+            for vnf in vnfs:
+                # vnf.summary()
+                ssnvnf = vnf.cast2ssn()
+                ss = ', {}, {}, {}'.format(
+                    ssnvnf.rxrate(),
+                    math.floor(ssnvnf.perfred()*100),
+                    ssnvnf.n_core())
+                f.write(ss)
+        f.write('\n')
+        f.flush()
+        time.sleep(1)
+        i = i + 1
+    f.close()
 
 

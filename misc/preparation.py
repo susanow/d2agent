@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import susanow
+import susanow.d2 as d2
 nfvi = susanow.nfvi.nfvi('labnet5.dpdk.ninja', 8888)
 
 pci0 = nfvi.alloc_port_pci('pci0', '0000:3b:00.0')
@@ -29,5 +30,7 @@ vnf1.attach_port(0, pci2)
 vnf1.attach_port(1, pci3)
 vnf1.reset()
 
+# d2.d2deploy(vnf0, nfvi)
+# d2.d2deploy(vnf1, nfvi)
 
 
