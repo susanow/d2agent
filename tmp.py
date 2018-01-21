@@ -26,10 +26,15 @@ def main():
     # thrd1.start()
     return
 
-def safe_d2out(vnf, nfvi):
-    d2.d2in(ssn_vnf, ssn_nfvi)
-    pass # TODO IMplement
 
+class Safed2:
+    def __init__(self):
+        self.lock = threading.Lock()
+    def d2out(self, vnf, nfvi):
+        with self.lock:
+            d2.d2in(ssn_vnf, ssn_nfvi)
+
+safed2 = Safed2()
 
 def background_d2monitor():
     nfvi0 = susanow.nfvi.nfvi('labnet5.dpdk.ninja', 8888)
@@ -60,7 +65,8 @@ def background_d2monitor():
 
             if (perf < 90):
                 print('{} d2out perf={}'.format(name, perf), end='')
-                d2.d2out(ssn_vnf, ssn_nfvi)
+                safed2.d2out(ssn_vnf, ssn_nfvi)
+                # d2.d2out(ssn_vnf, ssn_nfvi)
             else:
                 for rule in d2rules:
                     if (n_core == rule['ncore']):
