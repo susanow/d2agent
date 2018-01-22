@@ -47,8 +47,8 @@ def background_d2monitor(ssn_vnf, ssn_nfvi):
         "d2in" : {
             "promiss": 90,
             "thresholds": [
-                { 'ncore':2, 'threshold': (17*Milion*0.2) },
-                { 'ncore':4, 'threshold': (17*Milion*0.3) },
+                { 'ncore':2, 'threshold': (17*Milion*0.22) },
+                { 'ncore':4, 'threshold': (17*Milion*0.35) },
                 { 'ncore':8, 'threshold': (17*Milion*0.6) }
             ]
         }
@@ -60,21 +60,18 @@ def background_d2monitor(ssn_vnf, ssn_nfvi):
         n_core = ssn_vnf.n_core()
         rxrate = ssn_vnf.rxrate()
         perf   = ssn_vnf.tpr()
-        print('n_core={} perf={}% '.format(n_core, perf), end='')
 
         if (perf < d2rules["d2out"]):
-            print('{} d2out perf={}'.format(name, perf), end='')
+            print('{} d2out '.format(name))
             safed2.d2out(ssn_vnf, ssn_nfvi)
         else:
             for rule in d2rules['d2in']['thresholds']:
                 if (n_core == rule['ncore']):
                     if (perf > d2rules['d2in']['promiss']):
                         if (rxrate < rule['threshold']):
-                            print('{} d2in '.format(name), end='')
+                            print('{} d2in '.format(name))
                             safed2.d2in(ssn_vnf, ssn_nfvi)
-        print('pps={}M'.format(
-            math.floor(rxrate/Milion)))
-        time.sleep(0.5)
+        time.sleep(0.25)
     return
 
 
